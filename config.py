@@ -31,7 +31,10 @@ class Config:
         """設定値の検証"""
         required_vars = [
             'LINE_CHANNEL_ACCESS_TOKEN',
-            'LINE_CHANNEL_SECRET',
+            'LINE_CHANNEL_SECRET'
+        ]
+        
+        optional_vars = [
             'ZOOM_API_KEY',
             'ZOOM_API_SECRET',
             'GOOGLE_CREDENTIALS_JSON'
@@ -44,6 +47,16 @@ class Config:
         
         if missing_vars:
             raise ValueError(f"以下の環境変数が設定されていません: {', '.join(missing_vars)}")
+        
+        # オプション変数の確認
+        missing_optional = []
+        for var in optional_vars:
+            if not getattr(cls, var):
+                missing_optional.append(var)
+        
+        if missing_optional:
+            print(f"警告: 以下のオプション環境変数が設定されていません: {', '.join(missing_optional)}")
+            print("Zoom APIとGoogle Calendar APIの機能は無効になります")
         
         return True
 
