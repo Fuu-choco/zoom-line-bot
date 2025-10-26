@@ -161,6 +161,9 @@ def main():
         # Railway環境での起動
         if os.getenv('RAILWAY_ENVIRONMENT'):
             logger.info("Railway環境で起動中...")
+            logger.info(f"Railway PORT: {os.getenv('PORT')}")
+            logger.info(f"Railway RAILWAY_PORT: {os.getenv('RAILWAY_PORT')}")
+            logger.info(f"使用ポート: {Config.PORT}")
             app.run(host='0.0.0.0', port=Config.PORT, debug=False)
         else:
             app.run(host=Config.HOST, port=Config.PORT, debug=Config.DEBUG)
