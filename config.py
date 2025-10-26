@@ -24,7 +24,7 @@ class Config:
     # アプリケーション設定
     DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
     HOST = os.getenv('HOST', '0.0.0.0')
-    PORT = int(os.getenv('PORT', 8000))
+    PORT = int(os.getenv('PORT', os.getenv('RAILWAY_PORT', 8000)))
     
     @classmethod
     def validate_config(cls):

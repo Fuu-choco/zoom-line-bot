@@ -157,7 +157,13 @@ def main():
         
         # アプリケーション起動
         logger.info(f"アプリケーション起動: {Config.HOST}:{Config.PORT}")
-        app.run(host=Config.HOST, port=Config.PORT, debug=Config.DEBUG)
+        
+        # Railway環境での起動
+        if os.getenv('RAILWAY_ENVIRONMENT'):
+            logger.info("Railway環境で起動中...")
+            app.run(host='0.0.0.0', port=Config.PORT, debug=False)
+        else:
+            app.run(host=Config.HOST, port=Config.PORT, debug=Config.DEBUG)
         
     except Exception as e:
         logger.error(f"アプリケーション起動エラー: {str(e)}")
