@@ -53,10 +53,13 @@ def handle_webhook(request):
         
         logger.info(f"Webhook受信: {body}")
         
-        # 署名検証
-        if not verify_signature(body, signature):
-            logger.error("Invalid signature")
-            return jsonify({"error": "Invalid signature"}), 400
+        # 署名検証（LINE_CHANNEL_SECRETが設定されている場合のみ）
+        if Config.LINE_CHANNEL_SECRET:
+            if not verify_signature(body, signature):
+                logger.error("Invalid signature")
+                return jsonify({"error": "Invalid signature"}), 400
+        else:
+            logger.warning("LINE_CHANNEL_SECRETが設定されていません。署名検証をスキップします。")
         
         # イベント処理
         events = json.loads(body).get('events', [])

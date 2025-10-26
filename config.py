@@ -31,11 +31,11 @@ class Config:
     def validate_config(cls):
         """設定値の検証"""
         required_vars = [
-            'LINE_CHANNEL_ACCESS_TOKEN',
-            'LINE_CHANNEL_SECRET'
+            'LINE_CHANNEL_ACCESS_TOKEN'
         ]
         
         optional_vars = [
+            'LINE_CHANNEL_SECRET',
             'ZOOM_API_KEY',
             'ZOOM_API_SECRET',
             'ZOOM_ACCOUNT_ID',
