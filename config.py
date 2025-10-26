@@ -12,8 +12,9 @@ class Config:
     LINE_CHANNEL_SECRET = os.getenv('LINE_CHANNEL_SECRET')
     
     # Zoom API
-    ZOOM_API_KEY = os.getenv('ZOOM_API_KEY')
-    ZOOM_API_SECRET = os.getenv('ZOOM_API_SECRET')
+    ZOOM_API_KEY = os.getenv('ZOOM_API_KEY')  # Client ID
+    ZOOM_API_SECRET = os.getenv('ZOOM_API_SECRET')  # Client Secret
+    ZOOM_ACCOUNT_ID = os.getenv('ZOOM_ACCOUNT_ID')  # Account ID
     
     # Google Calendar
     GOOGLE_CREDENTIALS_JSON = os.getenv('GOOGLE_CREDENTIALS_JSON')
@@ -37,6 +38,7 @@ class Config:
         optional_vars = [
             'ZOOM_API_KEY',
             'ZOOM_API_SECRET',
+            'ZOOM_ACCOUNT_ID',
             'GOOGLE_CREDENTIALS_JSON'
         ]
         

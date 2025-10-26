@@ -1,32 +1,59 @@
-import jwt
 import requests
 import time
 from datetime import datetime
 from config import Config
 import logging
 from typing import Dict, Any, Optional
+import base64
 
 logger = logging.getLogger(__name__)
 
 class ZoomAPI:
-    """Zoom API クライアント"""
+    """Zoom API クライアント (Server to Server OAuth)"""
     
     def __init__(self):
-        self.api_key = Config.ZOOM_API_KEY
-        self.api_secret = Config.ZOOM_API_SECRET
+        self.client_id = Config.ZOOM_API_KEY  # Client ID
+        self.client_secret = Config.ZOOM_API_SECRET  # Client Secret
+        self.account_id = Config.ZOOM_ACCOUNT_ID  # Account ID
         self.base_url = "https://api.zoom.us/v2"
+        self.access_token = None
+        self.token_expires_at = 0
     
     def get_access_token(self) -> str:
-        """JWT アクセストークン生成"""
+        """OAuth アクセストークン取得"""
         try:
-            payload = {
-                "iss": self.api_key,
-                "exp": int(time.time()) + 3600  # 1時間有効
+            # トークンが有効な場合は再利用
+            if self.access_token and time.time() < self.token_expires_at:
+                return self.access_token
+            
+            # 新しいトークンを取得
+            url = "https://zoom.us/oauth/token"
+            
+            # Basic認証用のヘッダー
+            credentials = f"{self.client_id}:{self.client_secret}"
+            encoded_credentials = base64.b64encode(credentials.encode()).decode()
+            
+            headers = {
+                "Authorization": f"Basic {encoded_credentials}",
+                "Content-Type": "application/x-www-form-urlencoded"
             }
-            token = jwt.encode(payload, self.api_secret, algorithm="HS256")
-            return token
+            
+            data = {
+                "grant_type": "account_credentials",
+                "account_id": self.account_id
+            }
+            
+            response = requests.post(url, headers=headers, data=data)
+            response.raise_for_status()
+            
+            token_data = response.json()
+            self.access_token = token_data["access_token"]
+            self.token_expires_at = time.time() + token_data["expires_in"] - 60  # 1分前に更新
+            
+            return self.access_token
+            
         except Exception as e:
-            logger.error(f"JWT トークン生成エラー: {str(e)}")
+            logger.error(f"OAuth トークン取得エラー: {str(e)}")
             raise
     
     def get_headers(self) -> Dict[str, str]:
