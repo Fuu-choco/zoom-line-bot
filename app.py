@@ -148,6 +148,12 @@ def main():
     """メイン関数"""
     try:
         # 設定検証
+        logger.info("設定検証開始...")
+        logger.info(f"LINE_CHANNEL_ACCESS_TOKEN: {'設定済み' if Config.LINE_CHANNEL_ACCESS_TOKEN else '未設定'}")
+        logger.info(f"LINE_CHANNEL_SECRET: {'設定済み' if Config.LINE_CHANNEL_SECRET else '未設定'}")
+        logger.info(f"ZOOM_API_KEY: {'設定済み' if Config.ZOOM_API_KEY else '未設定'}")
+        logger.info(f"ZOOM_API_SECRET: {'設定済み' if Config.ZOOM_API_SECRET else '未設定'}")
+        logger.info(f"ZOOM_ACCOUNT_ID: {'設定済み' if Config.ZOOM_ACCOUNT_ID else '未設定'}")
         Config.validate_config()
         logger.info("設定検証完了")
         
@@ -164,8 +170,11 @@ def main():
         app.run(host='0.0.0.0', port=port, debug=False)
         
     except Exception as e:
+        import traceback
         logger.error(f"アプリケーション起動エラー: {str(e)}")
+        logger.error(f"エラー詳細: {traceback.format_exc()}")
         print(f"❌ アプリケーション起動エラー: {str(e)}")
+        print(f"エラー詳細: {traceback.format_exc()}")
         raise
 
 if __name__ == '__main__':
