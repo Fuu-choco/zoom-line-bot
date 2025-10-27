@@ -37,6 +37,7 @@ class GoogleCalendarAPI:
         """カレンダーイベント作成"""
         try:
             service = self.get_service()
+            logger.info(f"Google Calendar サービス取得成功")
             
             # イベントデータ構築
             event = {
@@ -70,6 +71,8 @@ class GoogleCalendarAPI:
             }
             
             logger.info(f"Google Calendar イベント作成開始: {event_data['meeting_name']}")
+            logger.info(f"カレンダーID: {self.calendar_id}")
+            logger.info(f"イベントデータ: {event}")
             
             # イベント作成
             created_event = service.events().insert(
