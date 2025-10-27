@@ -241,6 +241,8 @@ def main():
         # Railway環境では本番用WSGIサーバーを使用
         if is_railway:
             logger.info("Railway環境で本番用WSGIサーバーを使用")
+            # ルート登録を確認
+            logger.info(f"登録されたルート: {[rule.rule for rule in app.url_map.iter_rules()]}")
             try:
                 from waitress import serve
                 logger.info("waitressのインポート成功")
