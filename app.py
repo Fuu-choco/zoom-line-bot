@@ -22,10 +22,24 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 app.config.from_object(Config)
 
+@app.route('/')
+def index():
+    """トップページ"""
+    return jsonify({
+        "message": "Zoom Meeting Bot API",
+        "status": "running",
+        "version": "1.0.0",
+        "environment": "railway" if Config.IS_RAILWAY else "local",
+        "line_secret_configured": bool(Config.LINE_CHANNEL_SECRET),
+        "line_token_configured": bool(Config.LINE_CHANNEL_ACCESS_TOKEN)
+    })
+
 @app.route('/health')
 def health_check():
     """ヘルスチェック"""
     try:
+        from datetime import datetime
+        
         # データベース接続確認
         from database.init_db import get_connection
         conn = get_connection()
@@ -33,21 +47,27 @@ def health_check():
         cursor.execute('SELECT 1')
         conn.close()
         
+        # サービス設定確認
+        zoom_configured = bool(Config.ZOOM_API_KEY and Config.ZOOM_API_SECRET and Config.ZOOM_ACCOUNT_ID)
+        google_configured = bool(Config.GOOGLE_CREDENTIALS_JSON)
+        line_configured = bool(Config.LINE_CHANNEL_ACCESS_TOKEN and Config.LINE_CHANNEL_SECRET)
+        
         return {
             "status": "healthy",
-            "timestamp": "2024-01-01T00:00:00Z",
+            "timestamp": datetime.now().isoformat(),
             "database": "connected",
             "services": {
-                "zoom_api": "configured",
-                "google_calendar": "configured",
-                "line_bot": "configured"
-            }
+                "zoom_api": "configured" if zoom_configured else "not_configured",
+                "google_calendar": "configured" if google_configured else "not_configured",
+                "line_bot": "configured" if line_configured else "not_configured"
+            },
+            "environment": "railway" if Config.IS_RAILWAY else "local"
         }
     except Exception as e:
         logger.error(f"ヘルスチェックエラー: {str(e)}")
         return {
             "status": "unhealthy",
-            "timestamp": "2024-01-01T00:00:00Z",
+            "timestamp": datetime.now().isoformat(),
             "error": str(e)
         }, 500
 
@@ -117,6 +137,51 @@ def test_all():
         logger.error(f"全API接続テストエラー: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
+@app.route('/debug/env')
+def debug_env():
+    """環境変数デバッグ（開発用）"""
+    try:
+        import os
+        from config import Config
+        
+        # 環境変数の直接確認
+        env_vars = {}
+        for key in ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET', 'ZOOM_API_KEY', 'ZOOM_API_SECRET', 'ZOOM_ACCOUNT_ID', 'GOOGLE_CREDENTIALS_JSON']:
+            value = os.getenv(key)
+            if value:
+                # 機密情報は一部のみ表示
+                if 'SECRET' in key or 'TOKEN' in key or 'KEY' in key:
+                    env_vars[key] = f"{value[:8]}..." if len(value) > 8 else "***"
+                else:
+                    env_vars[key] = value
+            else:
+                env_vars[key] = "未設定"
+        
+        # Configクラスの値確認
+        config_vars = {}
+        for key in ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET', 'ZOOM_API_KEY', 'ZOOM_API_SECRET', 'ZOOM_ACCOUNT_ID', 'GOOGLE_CREDENTIALS_JSON']:
+            value = getattr(Config, key)
+            if value:
+                if 'SECRET' in key or 'TOKEN' in key or 'KEY' in key:
+                    config_vars[key] = f"{value[:8]}..." if len(value) > 8 else "***"
+                else:
+                    config_vars[key] = value
+            else:
+                config_vars[key] = "未設定"
+        
+        return jsonify({
+            "environment": "railway" if Config.IS_RAILWAY else "local",
+            "os_environ": env_vars,
+            "config_class": config_vars,
+            "railway_env": os.getenv('RAILWAY_ENVIRONMENT'),
+            "port": os.getenv('PORT'),
+            "railway_port": os.getenv('RAILWAY_PORT')
+        })
+        
+    except Exception as e:
+        logger.error(f"環境変数デバッグエラー: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/meetings/<user_id>')
 def get_user_meetings(user_id):
     """ユーザーの会議一覧取得"""
@@ -166,8 +231,27 @@ def main():
         
         # Railway環境での起動
         port = int(os.getenv('PORT', 8000))
-        logger.info(f"Railway環境で起動中... ポート: {port}")
-        app.run(host='0.0.0.0', port=port, debug=False)
+        logger.info(f"アプリケーション起動中... ポート: {port}")
+        
+        # Railway環境の判定を改善
+        is_railway = os.getenv('RAILWAY_ENVIRONMENT') or os.getenv('PORT')
+        logger.info(f"Railway環境判定: {is_railway}")
+        logger.info(f"利用可能な環境変数: {list(os.environ.keys())}")
+        
+        # Railway環境では本番用WSGIサーバーを使用
+        if is_railway:
+            logger.info("Railway環境で本番用WSGIサーバーを使用")
+            try:
+                from waitress import serve
+                logger.info("waitressのインポート成功")
+                serve(app, host='0.0.0.0', port=port)
+            except ImportError as e:
+                logger.error(f"waitressのインポートエラー: {e}")
+                logger.info("Flask開発サーバーにフォールバック")
+                app.run(host='0.0.0.0', port=port, debug=False)
+        else:
+            logger.info("ローカル環境でFlask開発サーバーを使用")
+            app.run(host='0.0.0.0', port=port, debug=False)
         
     except Exception as e:
         import traceback
