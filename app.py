@@ -158,7 +158,12 @@ def test_all():
 def debug_env():
     """環境変数デバッグ（開発用）"""
     try:
+        # トークン付き隠しURL: /debug/env?token=XXXX
         import os
+        token_env = os.getenv('DEBUG_TOKEN', '')
+        provided = request.args.get('token', '')
+        if not token_env or provided != token_env:
+            return jsonify({"error": "Not Found"}), 404
         from config import Config
         
         # 環境変数の直接確認
