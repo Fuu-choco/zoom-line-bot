@@ -210,6 +210,7 @@ def handle_duration_input(user_id: str, duration_str: str, reply_token: str):
         
         # メモ入力を依頼（任意）
         send_message(reply_token, "メモがあれば入力してください（なしの場合は「なし」と入力）")
+
 def handle_memo_input(user_id: str, memo_text: str, reply_token: str):
     """メモ入力処理（任意）"""
     try:
@@ -222,10 +223,6 @@ def handle_memo_input(user_id: str, memo_text: str, reply_token: str):
         send_confirmation_message(user_id, reply_token)
     except Exception as e:
         logger.error(f"メモ入力処理エラー: {str(e)}")
-        send_message(reply_token, "エラーが発生しました。もう一度お試しください。")
-        
-    except Exception as e:
-        logger.error(f"会議時間入力処理エラー: {str(e)}")
         send_message(reply_token, "エラーが発生しました。もう一度お試しください。")
 
 def send_confirmation_message(user_id: str, reply_token: str):
