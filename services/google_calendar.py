@@ -182,6 +182,7 @@ class GoogleCalendarAPI:
     def _build_event_description(self, event_data: Dict[str, Any]) -> str:
         """イベント説明文構築"""
         try:
+            memo_line = f"\nメモ: {event_data.get('memo','')}\n" if event_data.get('memo') else ""
             description = f"""
 Zoom会議
 
@@ -189,6 +190,7 @@ Zoom会議
 会議ID: {event_data.get('meeting_id', '')}
 パスワード: {event_data.get('meeting_password', '')}
 
+{memo_line}
 この会議はLINE Bot経由で作成されました。
             """.strip()
             

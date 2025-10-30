@@ -23,6 +23,7 @@ class ConversationState:
     WAITING_FOR_DATE = "waiting_for_date"
     WAITING_FOR_TIME = "waiting_for_time"
     WAITING_FOR_DURATION = "waiting_for_duration"
+    WAITING_FOR_MEMO = "waiting_for_memo"
     CONFIRMING = "confirming"
 
 def verify_signature(body: str, signature: str) -> bool:
@@ -101,6 +102,9 @@ def handle_message_event(event):
         elif current_state == ConversationState.WAITING_FOR_DURATION:
             # 会議時間入力
             handle_duration_input(user_id, message_text, reply_token)
+        elif current_state == ConversationState.WAITING_FOR_MEMO:
+            # メモ入力
+            handle_memo_input(user_id, message_text, reply_token)
         elif current_state == ConversationState.CONFIRMING:
             # 確認処理
             handle_confirmation(user_id, message_text, reply_token)
@@ -142,7 +146,9 @@ def handle_meeting_name(user_id: str, meeting_name: str, reply_token: str):
         user_states[user_id]['meeting_data']['meeting_name'] = meeting_name.strip()
         user_states[user_id]['state'] = ConversationState.WAITING_FOR_DATE
         
-        send_message(reply_token, "日付を教えてください（例：2024/01/15）")
+        from datetime import datetime
+        today_example = datetime.now().strftime('%Y/%m/%d')
+        send_message(reply_token, f"日付を教えてください（例：{today_example}）")
         
     except Exception as e:
         logger.error(f"会議名処理エラー: {str(e)}")
@@ -200,10 +206,23 @@ def handle_duration_input(user_id: str, duration_str: str, reply_token: str):
         
         # ユーザー状態を更新
         user_states[user_id]['meeting_data']['duration'] = duration
-        user_states[user_id]['state'] = ConversationState.CONFIRMING
+        user_states[user_id]['state'] = ConversationState.WAITING_FOR_MEMO
         
+        # メモ入力を依頼（任意）
+        send_message(reply_token, "メモがあれば入力してください（なしの場合は「なし」と入力）")
+def handle_memo_input(user_id: str, memo_text: str, reply_token: str):
+    """メモ入力処理（任意）"""
+    try:
+        memo = memo_text.strip()
+        if memo == "なし":
+            memo = ""
+        user_states[user_id]['meeting_data']['memo'] = memo
+        user_states[user_id]['state'] = ConversationState.CONFIRMING
         # 確認メッセージ送信
         send_confirmation_message(user_id, reply_token)
+    except Exception as e:
+        logger.error(f"メモ入力処理エラー: {str(e)}")
+        send_message(reply_token, "エラーが発生しました。もう一度お試しください。")
         
     except Exception as e:
         logger.error(f"会議時間入力処理エラー: {str(e)}")
@@ -219,13 +238,14 @@ def send_confirmation_message(user_id: str, reply_token: str):
         # 日時を結合
         start_datetime = combine_datetime(meeting_data['date'], meeting_data['time'])
         
+        memo_line = f"📝 メモ: {meeting_data.get('memo','')}\n" if meeting_data.get('memo') else ""
         message = f"""
 以下の内容で会議を作成しますか？
 
 📅 会議名: {meeting_data['meeting_name']}
 🕐 日時: {format_datetime(start_datetime)}
 ⏱️ 時間: {format_duration(meeting_data['duration'])}
-
+{memo_line}
 「はい」または「いいえ」でお答えください。
         """.strip()
         
@@ -299,7 +319,8 @@ def _create_meeting_async(user_id: str, meeting_data: dict):
             'duration': meeting_data['duration'],
             'meeting_url': zoom_result['meeting_url'],
             'meeting_id': zoom_result['meeting_id'],
-            'meeting_password': zoom_result['meeting_password']
+            'meeting_password': zoom_result['meeting_password'],
+            'memo': meeting_data.get('memo','')
         }
         
         calendar_result = create_calendar_event(calendar_event_data)
@@ -330,6 +351,8 @@ def _create_meeting_async(user_id: str, meeting_data: dict):
         }
         
         success_message = f"✅ 会議を作成しました！\n\n{format_meeting_info(meeting_info)}"
+        if calendar_result and calendar_result.get('event_url'):
+            success_message += f"\n\n📅 Googleカレンダーに追加しました: {calendar_result.get('event_url')}"
         send_push_message(user_id, success_message)
         
         # ユーザー状態をリセット

@@ -124,6 +124,7 @@ def generate_meeting_password() -> str:
 def format_meeting_info(meeting_data: dict) -> str:
     """会議情報のフォーマット"""
     try:
+        memo_line = f"\n📝 メモ: {meeting_data.get('memo','')}" if meeting_data.get('memo') else ""
         info = f"""
 📅 会議名: {meeting_data['meeting_name']}
 🕐 日時: {format_datetime(meeting_data['start_time'])}
@@ -131,6 +132,7 @@ def format_meeting_info(meeting_data: dict) -> str:
 🔗 会議URL: {meeting_data['meeting_url']}
 🔑 パスワード: {meeting_data['meeting_password']}
 🆔 会議ID: {meeting_data['meeting_id']}
+{memo_line}
         """.strip()
         
         return info
