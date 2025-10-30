@@ -1,4 +1,5 @@
 import json
+import os
 from datetime import datetime, timedelta
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
@@ -15,7 +16,13 @@ class GoogleCalendarAPI:
     def __init__(self):
         self.credentials_json = Config.GOOGLE_CREDENTIALS_JSON
         self.service = None
-        self.calendar_id = 'primary'  # デフォルトはプライマリカレンダー
+        # カレンダーIDの決定（環境変数→Config→primary）。前後空白は取り除く
+        # 正式名が無い場合、誤綴り GOOGLE_CALENDER_ID も見る
+        env_calendar_id = os.getenv('GOOGLE_CALENDAR_ID') or os.getenv('GOOGLE_CALENDER_ID')
+        cfg_calendar_id = getattr(Config, 'GOOGLE_CALENDAR_ID', None)
+        resolved = (env_calendar_id or cfg_calendar_id or 'primary')
+        self.calendar_id = resolved.strip() if isinstance(resolved, str) else 'primary'
+        logger.info(f"Google Calendar 使用カレンダーID: {self.calendar_id}")
     
     def get_service(self):
         """Google Calendar サービス取得"""
@@ -60,25 +67,23 @@ class GoogleCalendarAPI:
                         {'method': 'popup', 'minutes': 10},       # 10分前
                     ],
                 },
-                'conferenceData': {
-                    'createRequest': {
-                        'requestId': f"zoom-{event_data.get('meeting_id', '')}",
-                        'conferenceSolutionKey': {
-                            'type': 'hangoutsMeet'
-                        }
-                    }
-                }
             }
             
+            # 直近の環境値を再評価（再デプロイ前のインスタンス化タイミング差異に対応）
+            runtime_env_id = os.getenv('GOOGLE_CALENDAR_ID') or os.getenv('GOOGLE_CALENDER_ID')
+            runtime_cfg_id = getattr(Config, 'GOOGLE_CALENDAR_ID', None)
+            effective_calendar_id = (runtime_env_id or runtime_cfg_id or self.calendar_id)
+            if isinstance(effective_calendar_id, str):
+                effective_calendar_id = effective_calendar_id.strip()
+
             logger.info(f"Google Calendar イベント作成開始: {event_data['meeting_name']}")
-            logger.info(f"カレンダーID: {self.calendar_id}")
+            logger.info(f"カレンダーID: {effective_calendar_id}")
             logger.info(f"イベントデータ: {event}")
             
             # イベント作成
             created_event = service.events().insert(
-                calendarId=self.calendar_id,
+                calendarId=effective_calendar_id,
                 body=event,
-                conferenceDataVersion=1,
                 sendUpdates='none'  # 参加者に通知しない
             ).execute()
             

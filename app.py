@@ -5,6 +5,7 @@ from database.init_db import init_database
 from services.line_bot import handle_webhook
 from services.zoom_api import test_zoom_connection
 from services.google_calendar import test_google_calendar_connection
+from services.google_calendar import google_calendar_api
 import os
 
 # ログ設定
@@ -61,7 +62,8 @@ def health_check():
                 "google_calendar": "configured" if google_configured else "not_configured",
                 "line_bot": "configured" if line_configured else "not_configured"
             },
-            "environment": "railway" if Config.IS_RAILWAY else "local"
+            "environment": "railway" if Config.IS_RAILWAY else "local",
+            "calendar_id": getattr(Config, 'GOOGLE_CALENDAR_ID', None)
         }
     except Exception as e:
         logger.error(f"ヘルスチェックエラー: {str(e)}")
@@ -102,6 +104,21 @@ def test_google_calendar():
             return jsonify({"status": "error", "message": "Google Calendar API接続失敗"}), 500
     except Exception as e:
         logger.error(f"Google Calendar API テストエラー: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/test/google-calendar-list')
+def test_google_calendar_list():
+    """Google Calendar 一覧取得（デバッグ用）"""
+    try:
+        calendars = google_calendar_api.get_calendar_list()
+        from config import Config as C
+        return jsonify({
+            "status": "success",
+            "current_calendar_id": getattr(C, 'GOOGLE_CALENDAR_ID', None),
+            "calendars": calendars
+        })
+    except Exception as e:
+        logger.error(f"Google Calendar 一覧取得エラー: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/test/all')
@@ -146,7 +163,7 @@ def debug_env():
         
         # 環境変数の直接確認
         env_vars = {}
-        for key in ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET', 'ZOOM_API_KEY', 'ZOOM_API_SECRET', 'ZOOM_ACCOUNT_ID', 'GOOGLE_CREDENTIALS_JSON']:
+        for key in ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET', 'ZOOM_API_KEY', 'ZOOM_API_SECRET', 'ZOOM_ACCOUNT_ID', 'GOOGLE_CREDENTIALS_JSON', 'GOOGLE_CALENDAR_ID', 'GOOGLE_CALENDER_ID']:
             value = os.getenv(key)
             if value:
                 # 機密情報は一部のみ表示
@@ -159,7 +176,7 @@ def debug_env():
         
         # Configクラスの値確認
         config_vars = {}
-        for key in ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET', 'ZOOM_API_KEY', 'ZOOM_API_SECRET', 'ZOOM_ACCOUNT_ID', 'GOOGLE_CREDENTIALS_JSON']:
+        for key in ['LINE_CHANNEL_ACCESS_TOKEN', 'LINE_CHANNEL_SECRET', 'ZOOM_API_KEY', 'ZOOM_API_SECRET', 'ZOOM_ACCOUNT_ID', 'GOOGLE_CREDENTIALS_JSON', 'GOOGLE_CALENDAR_ID']:
             value = getattr(Config, key)
             if value:
                 if 'SECRET' in key or 'TOKEN' in key or 'KEY' in key:

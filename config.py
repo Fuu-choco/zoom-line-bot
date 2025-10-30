@@ -25,6 +25,9 @@ class Config:
     
     # Google Calendar
     GOOGLE_CREDENTIALS_JSON = os.getenv('GOOGLE_CREDENTIALS_JSON')
+    # 正式名が未設定でも、誤綴り GOOGLE_CALENDER_ID をフォールバックで参照
+    _gcid_env = os.getenv('GOOGLE_CALENDAR_ID') or os.getenv('GOOGLE_CALENDER_ID')
+    GOOGLE_CALENDAR_ID = _gcid_env.strip() if isinstance(_gcid_env, str) else None  # 例: yourname@gmail.com or xxxxx@group.calendar.google.com
     
     # データベース
     DATABASE_URL = 'meetings.db'
@@ -49,7 +52,8 @@ class Config:
             'ZOOM_API_KEY',
             'ZOOM_API_SECRET',
             'ZOOM_ACCOUNT_ID',
-            'GOOGLE_CREDENTIALS_JSON'
+            'GOOGLE_CREDENTIALS_JSON',
+            'GOOGLE_CALENDAR_ID'
         ]
         
         # デバッグ情報を出力
